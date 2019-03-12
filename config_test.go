@@ -17,26 +17,37 @@
 
 package avrokafka
 
-import "math/rand"
+import (
+	"testing"
 
-// common helpers used by unit+integration tests
+	"github.com/elastic/beats/libbeat/common"
+)
 
-func randString(length int) string {
-	return string(randASCIIBytes(length))
-}
-
-func randASCIIBytes(length int) []byte {
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = randChar()
+func TestConfigAcceptValid(t *testing.T) {
+	tests := map[string]common.MapStr{
+		"default config is valid": common.MapStr{},
+		"lz4 with 0.11": common.MapStr{
+			"compression": "lz4",
+			"version":     "0.11",
+		},
+		"lz4 with 1.0": common.MapStr{
+			"compression": "lz4",
+			"version":     "1.0.0",
+		},
 	}
-	return b
-}
 
-func randChar() byte {
-	start, end := 'a', 'z'
-	if rand.Int31n(2) == 1 {
-		start, end = 'A', 'Z'
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			c := common.MustNewConfigFrom(test)
+			c.SetString("hosts", 0, "localhost")
+			cfg, err := readConfig(c)
+			if err != nil {
+				t.Fatalf("Can not create test configuration: %v", err)
+			}
+			if _, err := newSaramaConfig(cfg); err != nil {
+				t.Fatalf("Failure creating sarama config: %v", err)
+			}
+		})
 	}
-	return byte(rand.Int31n(end-start+1) + start)
 }
